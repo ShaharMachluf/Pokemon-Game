@@ -16,13 +16,17 @@ class JsonParser:
 
     @staticmethod
     def __parse_pos(d):  # Dictionary that contains pos as string, converted to tuple.
-        d['pos'] = tuple(d['pos'].split(',')[:2])
+        d['pos'] = tuple([float(x) for x in d['pos'].split(',')][:2])
         return d
 
     @staticmethod
-    def load_agents(s):
+    def get_agents(s):
         return [JsonParser.__parse_pos(x["Agent"]) for x in json.loads(s)["Agents"]]
 
     @staticmethod
     def get_game_info(s):
         return json.loads(s)["GameServer"]
+
+    @staticmethod
+    def get_pokemons(s):
+        return [JsonParser.__parse_pos(x["Pokemon"]) for x in json.loads(s)["Pokemons"]]
