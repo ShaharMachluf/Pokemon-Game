@@ -9,7 +9,7 @@ class Ash:
         self.pokemons = JsonParser.get_pokemons(self.client.get_pokemons())
         self.g = JsonParser.load_graph(self.client.get_graph())
         self.agents = JsonParser.get_agents(self.client.get_agents())
-        self.info = JsonParser.get_game_info(self.client.get_info())
+        self.info = JsonParser.get_game_info(self.client.get_info())  # f
 
 
     def start_game(self):
