@@ -27,6 +27,24 @@ class Padding:
     def get_right(self):
         return self.right
 
+class GraphicsConfig:
+    # Simple class to configure the graph settings
+    BLACK = (0, 0, 0)
+    WHITE = (255, 255, 255)
+    RED = (255, 0, 0)
+    GREEN = (0, 255, 0)
+    BLUE = (0, 0, 255)
+
+    node_normal = BLUE
+    node_selected = GREEN
+    path_normal = BLACK
+    path_selected = RED
+    bg_color = WHITE
+    arrow_angle = 65  # What angle will be the arrow head line compare to the line it's on
+    arrow_pos = 0.7  # the arrow head will start at .. of the distance from src to dest
+    arrow_scale = 16  # arrow len will be divided by..
+    radius_dens = 256  # so radius = (screen_area / (n_of_edges + 1)) / radius_dens
+
 
 class Graphics:
     DEFAULT_SIZE = 500
@@ -83,7 +101,7 @@ class Graphics:
         self.maxY = -sys.maxsize
 
         for n in self.graph.nodes:
-            x, y = self.get_pos(self.graph.nodes[n])[:2]
+            x, y = self.get_pos((n, self.graph.nodes[n]))[:2]
             self.minX = min(self.minX, x)
             self.minY = min(self.minY, y)
             self.maxX = max(self.maxX, x)
@@ -142,17 +160,17 @@ class Graphics:
                                         random.uniform(0, self.padding.get_height(self.h)))
             return self.no_pos[node[0]]
         else:
-            return node.pos
+            return node[1]['pos']
 
     def get_all_positioned(self):
         for n in self.graph.nodes:
-            yield self.get_positioned(self.graph.nodes[n])
+            yield self.get_positioned((n, self.graph.nodes[n]))
 
     def get_positioned(self, node):
         x, y = self.get_pos(node)
         x = self.padding.get_right() + ((x - self.minX) * self.xS)
         y = self.padding.get_top() + ((y - self.minY) * self.yS)
-        return node.id, (x, y)
+        return node[0], {'pos': (x, y)}
 
     def draw_all(self):
         nodes = {}
@@ -162,10 +180,12 @@ class Graphics:
         self.scale_by_nodes()
         for n in self.get_all_positioned():
             nodes[n[0]] = n
-            for e in self.graph.all_out_edges_of_node(n[0]):
-                if e not in nodes:
-                    nodes[e] = self.get_positioned(self.graph.nodes[e])
-                self.draw_edge(n[0], nodes[e])
+            for e in self.graph.edges(n[0], data=True):
+                if e[0] not in nodes:
+                    nodes[e[0]] = {'pos': self.get_positioned(self.graph.nodes[e])}
+                print(n)
+                print(nodes[e[0]])
+                self.draw_edge(n, nodes[e[0]])
             self.draw_node(n[0])
 
     def draw_node(self, n):
@@ -184,7 +204,7 @@ class Graphics:
         self.draw_arrow_head(n1, n2, color)
 
     def draw_arrow_head(self, src, dest, color):
-        leng = src.distance(dest)
+        leng = Algo.distance(src, dest)
         if leng == 0:
             return
         arw_len = leng / self.config.arrow_scale
