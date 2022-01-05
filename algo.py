@@ -25,14 +25,15 @@ class Ash:
         positions = self.find_pokemons()
         num = self.info["agents"]
         for i in range(0, num):
-            if len(positions) < i:
+            if len(positions) <= i + 1:
                 id_ = positions[i][0]
+                print('{"id":' + str(id_) + '}')
                 self.client.add_agent('{"id":' + str(id_) + '}')
             else:
                 id_ = random.randrange(0, self.g.number_of_nodes() - 1)
                 self.client.add_agent('{"id":' + str(id_) + '}')
-        self.client.move()
         self.agents = JsonParser.get_agents(self.client.get_agents())
+        print(self.agents)
         self.graphics = GameGraphics.Graphics(self, GameGraphics.GraphicsConfig())
         # Thread(self.graphics.display).start
 
@@ -55,7 +56,7 @@ class Ash:
     def distance(src, dest):
         return math.sqrt(math.pow(src[0] - dest[0], 2) + math.pow(src[1] - dest[1], 2))
 
-# a = Ash("127.0.0.1", 6666)
+a = Ash("127.0.0.1", 6666)
 # [print(e) for e in a.g.edges(data=True)]
 # [print(e) for e in a.g.nodes(data=True)]
 
