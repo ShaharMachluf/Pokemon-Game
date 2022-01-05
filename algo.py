@@ -16,10 +16,10 @@ class Ash:
         self.client.start_connection(host, port)
         self.pokemons = JsonParser.get_pokemons(self.client.get_pokemons())
         self.g = JsonParser.load_graph(self.client.get_graph())
-        self.info = JsonParser.get_game_info(self.client.get_info())  # f
+        self.info = JsonParser.get_game_info(self.client.get_info())
+        self.agents = None
         self.start_game()
-        self.grphics = GameGraphics.Graphics(self, GameGraphics.GraphicsConfig())
-        # Thread(self.graphics.display).start
+        self.graphics = None
 
     def start_game(self):
         positions = self.find_pokemons()
@@ -31,6 +31,10 @@ class Ash:
             else:
                 id_ = random.randrange(0, self.g.number_of_nodes() - 1)
                 self.client.add_agent('{"id":' + str(id_) + '}')
+        self.client.move()
+        self.agents = JsonParser.get_agents(self.client.get_agents())
+        self.graphics = GameGraphics.Graphics(self, GameGraphics.GraphicsConfig())
+        # Thread(self.graphics.display).start
 
     def find_pokemons(self):
         positions = []
@@ -51,7 +55,7 @@ class Ash:
     def distance(src, dest):
         return math.sqrt(math.pow(src[0] - dest[0], 2) + math.pow(src[1] - dest[1], 2))
 
-a = Ash("127.0.0.1", 6666)
+# a = Ash("127.0.0.1", 6666)
 # [print(e) for e in a.g.edges(data=True)]
 # [print(e) for e in a.g.nodes(data=True)]
 
