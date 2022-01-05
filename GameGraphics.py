@@ -5,8 +5,6 @@ import sys
 import pygame
 
 from networkx import DiGraph, get_node_attributes
-# from algo import Ash
-import threading
 
 
 class Padding:
@@ -41,6 +39,7 @@ class GraphicsConfig:
     FONT_NAME = 'Arial'
     FONT_SIZE = 20
     FONT_IS_BOLD = True
+    AGENT_IMG = './Pokeball.png'
 
     node_normal = BLUE
     node_selected = GREEN
@@ -57,10 +56,9 @@ class Graphics:
     DEFAULT_SIZE = 500
     DEFAULT_PADDING = Padding(20, 20, 20, 20)
 
-    def __init__(self, player: Ash, config, padding: Padding = None):
+    def __init__(self, player, config, padding: Padding = None):
         pygame.init()
         self.player = player
-        self.g = player.g
 
         self.ui_event = pygame.USEREVENT + 1
 
@@ -75,11 +73,13 @@ class Graphics:
         self.clock = pygame.time.Clock()
 
         # Graph variables:
-        self.graph = graph if graph is not None else DiGraph()
+        self.graph = player.g if player.g is not None else DiGraph()
         self.padding = padding if padding is not None else self.DEFAULT_PADDING
         self.config = config
         self.font = pygame.font.SysFont(self.config.FONT_NAME, self.config.FONT_SIZE,
                                           bold=self.config.FONT_IS_BOLD)
+
+        self.agent_img = pygame.image.load(self.config.AGENT_IMG)
         self.no_pos = {}
         self.selected_nodes = []
         self.selected_edges = []
@@ -170,11 +170,20 @@ class Graphics:
         for n in self.graph.nodes:
             yield self.get_positioned((n, self.graph.nodes[n]))
 
-    def get_positioned(self, node):
-        x, y = self.get_pos(node)
+    def get_agents_positioned(self):
+        for a in self.player.agents:
+            yield self.get_positioned(a, False)
+
+    def get_positioned(self, element, is_node=True):
+        if is_node is True:
+            x, y = self.get_pos(element)  # element is node
+            id_ = element[0]
+        else:  # Element is agent or pokemon.
+            x, y = element['pos'][0], element['pos'][1]
+            id_ = element['id']
         x = self.padding.get_right() + ((x - self.minX) * self.xS)
         y = self.padding.get_top() + ((y - self.minY) * self.yS)
-        return node[0], {'pos': (x,y)}
+        return id_, {'pos': (x, y)}
 
     def draw_all(self):
         nodes = {}
@@ -190,6 +199,8 @@ class Graphics:
                 print(e)
                 self.draw_edge(n, nodes[e[1]])  # n is e[0] thus we want point to node id e[1]
             self.draw_node(n)
+        for agent in self.get_agents_positioned():
+            self.draw_agent(agent[1]['pos'])
 
     def draw_node(self, n):
         # The radius of each node is now determined by the density of the graph,
@@ -204,6 +215,10 @@ class Graphics:
         id_srf = self.font.render(str(n[0]), True, self.config.WHITE)
         rect = id_srf.get_rect(center=(n[1]['pos'][0], n[1]['pos'][1]))
         self.screen.blit(id_srf, rect)
+
+    def draw_agent(self, agent_pos):
+        POKE_SIZE = 30
+        self.screen.blit(pygame.transform.scale(self.agent_img, (30, 30)), agent_pos)
 
     def draw_edge(self, n1, n2):
         color = self.config.path_selected if (n1[0], n2[0]) in self.selected_edges else self.config.path_normal
