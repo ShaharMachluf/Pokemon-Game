@@ -1,5 +1,8 @@
 import math
+import random
+from threading import Thread
 
+import GameGraphics
 from GameServerParser import JsonParser
 import networkx as nx
 from client import Client
@@ -15,13 +18,19 @@ class Ash:
         self.g = JsonParser.load_graph(self.client.get_graph())
         self.info = JsonParser.get_game_info(self.client.get_info())  # f
         self.start_game()
+        self.grphics = GameGraphics.Graphics(self, GameGraphics.GraphicsConfig())
+        # Thread(self.graphics.display).start
 
     def start_game(self):
         positions = self.find_pokemons()
         num = self.info["agents"]
         for i in range(0, num):
-            id_ = positions[i][0]
-            self.client.add_agent('{"id":' + str(id_) + '}')
+            if len(positions) < i:
+                id_ = positions[i][0]
+                self.client.add_agent('{"id":' + str(id_) + '}')
+            else:
+                id_ = random.randrange(0, self.g.number_of_nodes() - 1)
+                self.client.add_agent('{"id":' + str(id_) + '}')
 
     def find_pokemons(self):
         positions = []
