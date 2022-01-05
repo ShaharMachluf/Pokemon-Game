@@ -6,10 +6,11 @@ from algo import Ash
 
 def main():
     args = sys.argv[1:]
-    print("GAME IS ABOUT TO START... SLEEPING FOR 3 SEC")
-    time.sleep(3)
-    print("GAME WILL NOW BEGIN")
     if len(args) < 2:
+        print("Client is about to start playing...\nWaiting 3 seconds to let the server start.")
+        time.sleep(3)
+        print("GAME WILL NOW BEGIN")
+
         host = '127.0.0.1'
         port = 6666
     else:

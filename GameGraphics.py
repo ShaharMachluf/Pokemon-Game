@@ -54,9 +54,33 @@ class GraphicsConfig:
     radius_dens = 10  # so radius = (screen_area / (n_of_edges + 1)) / radius_dens
 
 
+class Button:
+    def __init__(self, pos, text, t_color, bg_color, f_size, call_on_click):
+        self.pos = pos
+        self.render = pygame.font.SysFont("Arial", f_size).render(text, True, t_color)
+        self.surface = pygame.Surface(self.render.get_size())
+        self.surface.fill(bg_color)
+        self.surface.blit(self.render, (0, 0))  # pos relative to the surface
+        self.call_on_click = call_on_click[0]
+        if self.call_on_click and len(call_on_click) > 1:
+            self.call_on_click_args = call_on_click[1:]
+        else:
+            self.call_on_click_args = None
+        self.rect = pygame.Rect(self.pos[0], self.pos[1],
+                                self.render.get_size()[0], self.render.get_size()[1])
+
+    def show(self, screen):
+        screen.blit(self.surface, self.pos)
+
+    def click_event(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN and pygame.mouse.get_pressed()[0] and self.rect.collidepoint(*pygame.mouse.get_pos()):
+            if self.call_on_click is not None:
+                self.call_on_click(*self.call_on_click_args) if self.call_on_click_args is not None else self.call_on_click()
+
+
 class Graphics:
     DEFAULT_SIZE = 500
-    DEFAULT_PADDING = Padding(20, 20, 20, 20)
+    DEFAULT_PADDING = Padding(40, 60, 40, 40)
 
     def __init__(self, player, config, padding: Padding = None):
         pygame.init()
@@ -91,7 +115,13 @@ class Graphics:
         # Just random start point to create vars
         self.minX, self.minY, self.maxX, self.maxY = 0, 0, 0, 0
         self.xD, self.xS, self.yD, self.yS = 1, 1, 1, 1
+        self.xButton = Button((0, 0), " Stop Game", self.config.WHITE, self.config.RED, 20, [self.close_clicked])
         pygame.event.post(pygame.event.Event(self.ui_event, message="UI Created"))
+
+    def close_clicked(self):
+        self.player.client.stop()
+        self.player.client.stop_connection()
+        exit(0)
 
     def set_special_by_path(self, path):
         if len(path) == 0:
@@ -157,6 +187,8 @@ class Graphics:
                     # We re-render on window size changed
                     self.w = self.screen.get_width()
                     self.h = self.screen.get_height()
+                else:
+                    self.xButton.click_event(event)
             self.screen.fill(self.config.bg_color)
             self.draw_all()
             pygame.display.update()
@@ -204,6 +236,7 @@ class Graphics:
             self.scale_as_window()
             return
         self.scale_by_nodes()
+        # Draw cities (nodes)
         for n in self.get_all_positioned():
             nodes[n[0]] = n
             for e in self.graph.edges(n[0], data=True):
@@ -211,11 +244,24 @@ class Graphics:
                     nodes[e[1]] = self.get_positioned((e[1], self.graph.nodes[e[1]]))
                 self.draw_edge(n, nodes[e[1]])  # n is e[0] thus we want point to node id e[1]
             self.draw_node(n)
+        # Draw agents
         for agent in self.get_agents_positioned():
             self.draw_agent(agent)
-
+        # Draw pokemons
         for poke in self.get_poke_positioned():
             self.draw_poke(poke)
+        # Draw stats
+        self.draw_stats()
+        self.xButton.show(self.screen)
+
+    def draw_stats(self):
+        moves = self.player.info["moves"]
+        grade = self.player.info["grade"]
+        title = "Grade: " + str(grade) + "          " + str("Moves: ") + str(moves)
+        rend = self.font.render(title, True, self.config.BLACK)
+        rect = rend.get_rect(center=(self.padding.get_width(self.w) / 2,
+                                     self.padding.get_top() / 2 - self.config.FONT_SIZE / 2))
+        self.screen.blit(rend, rect)
 
     def draw_node(self, n):
         # The radius of each node is now determined by the density of the graph,
@@ -295,4 +341,3 @@ class Graphics:
     @staticmethod
     def distance(src, dest):
         return math.sqrt(math.pow(src[0] - dest[0], 2) + math.pow(src[1] - dest[1], 2))
-
