@@ -26,7 +26,6 @@ class Ash:
         for i in range(0, num):
             if len(positions) <= i + 1:
                 id_ = positions[i][0]
-                print('{"id":' + str(id_) + '}')
                 self.client.add_agent('{"id":' + str(id_) + '}')
             else:
                 id_ = random.randrange(0, self.g.number_of_nodes() - 1)
