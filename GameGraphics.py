@@ -209,7 +209,6 @@ class Graphics:
             for e in self.graph.edges(n[0], data=True):
                 if e[1] not in nodes:
                     nodes[e[1]] = self.get_positioned((e[1], self.graph.nodes[e[1]]))
-                print(e)
                 self.draw_edge(n, nodes[e[1]])  # n is e[0] thus we want point to node id e[1]
             self.draw_node(n)
         for agent in self.get_agents_positioned():
