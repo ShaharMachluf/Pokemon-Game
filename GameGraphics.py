@@ -5,8 +5,6 @@ import sys
 import pygame
 
 from networkx import DiGraph, get_node_attributes
-# from algo import Ash
-import threading
 
 
 class Padding:
@@ -41,6 +39,7 @@ class GraphicsConfig:
     FONT_NAME = 'Arial'
     FONT_SIZE = 20
     FONT_IS_BOLD = True
+    AGENT_IMG = './Pokeball.png'
 
     node_normal = BLUE
     node_selected = GREEN
@@ -57,10 +56,9 @@ class Graphics:
     DEFAULT_SIZE = 500
     DEFAULT_PADDING = Padding(20, 20, 20, 20)
 
-    def __init__(self, player: Ash, config, padding: Padding = None):
+    def __init__(self, player, config, padding: Padding = None):
         pygame.init()
         self.player = player
-        self.g = player.g
 
         self.ui_event = pygame.USEREVENT + 1
 
@@ -75,11 +73,13 @@ class Graphics:
         self.clock = pygame.time.Clock()
 
         # Graph variables:
-        self.graph = graph if graph is not None else DiGraph()
+        self.graph = player.g if player.g is not None else DiGraph()
         self.padding = padding if padding is not None else self.DEFAULT_PADDING
         self.config = config
         self.font = pygame.font.SysFont(self.config.FONT_NAME, self.config.FONT_SIZE,
                                           bold=self.config.FONT_IS_BOLD)
+
+        self.agent_img = pygame.image.load(self.config.AGENT_IMG)
         self.no_pos = {}
         self.selected_nodes = []
         self.selected_edges = []
@@ -170,11 +170,15 @@ class Graphics:
         for n in self.graph.nodes:
             yield self.get_positioned((n, self.graph.nodes[n]))
 
+    def get_agents_positioned(self):
+        for a in self.player.agents:
+            yield self.get_positioned((a, self.player.agents[a]))
+
     def get_positioned(self, node):
         x, y = self.get_pos(node)
         x = self.padding.get_right() + ((x - self.minX) * self.xS)
         y = self.padding.get_top() + ((y - self.minY) * self.yS)
-        return node[0], {'pos': (x,y)}
+        return node[0], {'pos': (x, y)}
 
     def draw_all(self):
         nodes = {}
@@ -190,6 +194,8 @@ class Graphics:
                 print(e)
                 self.draw_edge(n, nodes[e[1]])  # n is e[0] thus we want point to node id e[1]
             self.draw_node(n)
+        for agent in self.player.agents:
+            self.screen.blit(pygame.transform.scale(self.agent_img, (500, 500)), (0, 0))
 
     def draw_node(self, n):
         # The radius of each node is now determined by the density of the graph,
