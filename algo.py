@@ -34,7 +34,7 @@ class Ash:
                 self.client.add_agent('{"id":' + str(id_) + '}')
         self.agents = JsonParser.get_agents(self.client.get_agents())
         print(self.agents)
-        self.graphics = GameGraphics.Graphics(self, GameGraphics.GraphicsConfig())
+        # self.graphics = GameGraphics.Graphics(self, GameGraphics.GraphicsConfig())
         # Thread(self.graphics.display).start
 
     def find_pokemons(self):
@@ -52,11 +52,13 @@ class Ash:
                 if (type_ == 1 and e[0] < e[1]) or (type_ == -1 and e[0] > e[1]):
                     return e
 
+
+
     @staticmethod
     def distance(src, dest):
         return math.sqrt(math.pow(src[0] - dest[0], 2) + math.pow(src[1] - dest[1], 2))
 
-a = Ash("127.0.0.1", 6666)
+# a = Ash("127.0.0.1", 6666)
 # [print(e) for e in a.g.edges(data=True)]
 # [print(e) for e in a.g.nodes(data=True)]
 
