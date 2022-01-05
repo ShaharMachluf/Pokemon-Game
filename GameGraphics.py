@@ -5,6 +5,8 @@ import sys
 import pygame
 
 from networkx import DiGraph, get_node_attributes
+# from algo import Ash
+import threading
 
 
 class Padding:
@@ -27,6 +29,7 @@ class Padding:
     def get_right(self):
         return self.right
 
+
 class GraphicsConfig:
     # Simple class to configure the graph settings
     BLACK = (0, 0, 0)
@@ -34,6 +37,10 @@ class GraphicsConfig:
     RED = (255, 0, 0)
     GREEN = (0, 255, 0)
     BLUE = (0, 0, 255)
+
+    FONT_NAME = 'Arial'
+    FONT_SIZE = 20
+    FONT_IS_BOLD = True
 
     node_normal = BLUE
     node_selected = GREEN
@@ -43,21 +50,24 @@ class GraphicsConfig:
     arrow_angle = 65  # What angle will be the arrow head line compare to the line it's on
     arrow_pos = 0.7  # the arrow head will start at .. of the distance from src to dest
     arrow_scale = 16  # arrow len will be divided by..
-    radius_dens = 256  # so radius = (screen_area / (n_of_edges + 1)) / radius_dens
+    radius_dens = 10  # so radius = (screen_area / (n_of_edges + 1)) / radius_dens
 
 
 class Graphics:
     DEFAULT_SIZE = 500
     DEFAULT_PADDING = Padding(20, 20, 20, 20)
 
-    def __init__(self, config, graph, padding: Padding = None):
+    def __init__(self, player: Ash, config, padding: Padding = None):
         pygame.init()
+        self.player = player
+        self.g = player.g
 
         self.ui_event = pygame.USEREVENT + 1
 
         # Screen size & settings
         self.w = self.DEFAULT_SIZE
         self.h = self.DEFAULT_SIZE
+
         self.set_working_area()
         self.screen = pygame.display.set_mode((self.w, self.h), pygame.RESIZABLE)
         pygame.display.set_caption("Graph")
@@ -68,6 +78,8 @@ class Graphics:
         self.graph = graph if graph is not None else DiGraph()
         self.padding = padding if padding is not None else self.DEFAULT_PADDING
         self.config = config
+        self.font = pygame.font.SysFont(self.config.FONT_NAME, self.config.FONT_SIZE,
+                                          bold=self.config.FONT_IS_BOLD)
         self.no_pos = {}
         self.selected_nodes = []
         self.selected_edges = []
@@ -133,25 +145,17 @@ class Graphics:
     def display(self):
         running = True
         while running:
-            event = pygame.event.wait()  # Unlike iterating events or something like that
-            # the wait is actually like an event listener thus has lower cpu usage.
-            if event.type == pygame.QUIT:
-                running = False
-            elif event.type == pygame.WINDOWSIZECHANGED:
-                # We re-render on window size changed
-                self.w = self.screen.get_width()
-                self.h = self.screen.get_height()
-                self.screen.fill(self.config.bg_color)
-                self.draw_all()
-                pygame.display.update()
-                self.clock.tick(60)
-
-            elif event.type == self.ui_event:
-                # We re-render when we add or change something in the graph.
-                self.screen.fill(self.config.bg_color)
-                self.draw_all()
-                pygame.display.update()
-                self.clock.tick(60)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    exit(0)
+                elif event.type == pygame.WINDOWSIZECHANGED:
+                    # We re-render on window size changed
+                    self.w = self.screen.get_width()
+                    self.h = self.screen.get_height()
+            self.screen.fill(self.config.bg_color)
+            self.draw_all()
+            pygame.display.update()
+            self.clock.tick(30)
 
     def get_pos(self, node):
         if node[1]['pos'] is None or node[1]['pos'] == ():
@@ -170,7 +174,7 @@ class Graphics:
         x, y = self.get_pos(node)
         x = self.padding.get_right() + ((x - self.minX) * self.xS)
         y = self.padding.get_top() + ((y - self.minY) * self.yS)
-        return node[0], {'pos': (x, y)}
+        return node[0], {'pos': (x,y)}
 
     def draw_all(self):
         nodes = {}
@@ -181,22 +185,25 @@ class Graphics:
         for n in self.get_all_positioned():
             nodes[n[0]] = n
             for e in self.graph.edges(n[0], data=True):
-                if e[0] not in nodes:
-                    nodes[e[0]] = {'pos': self.get_positioned(self.graph.nodes[e])}
-                print(n)
-                print(nodes[e[0]])
-                self.draw_edge(n, nodes[e[0]])
-            self.draw_node(n[0])
+                if e[1] not in nodes:
+                    nodes[e[1]] = self.get_positioned((e[1], self.graph.nodes[e[1]]))
+                print(e)
+                self.draw_edge(n, nodes[e[1]])  # n is e[0] thus we want point to node id e[1]
+            self.draw_node(n)
 
     def draw_node(self, n):
         # The radius of each node is now determined by the density of the graph,
         # added 1 so it won't divide by 0 if none.
         # good ratio too: min(self.w, self.h) / 150
-        radius = ((self.w * self.h) / (self.graph.e_size() + 1)) / self.config.radius_dens
-        radius = min(radius, 10)
+        radius = ((self.w * self.h) / (self.graph.number_of_edges() + 1)) / self.config.radius_dens
+        radius = min(radius, 20)
         pygame.draw.circle(self.screen,
-                           self.config.node_selected if n.id in self.selected_nodes else self.config.node_normal,
-                           n.pos[:2], radius)
+                           self.config.node_selected if n[0] in self.selected_nodes else self.config.node_normal,
+                           n[1]['pos'], radius)
+        # draw the node id
+        id_srf = self.font.render(str(n[0]), True, self.config.WHITE)
+        rect = id_srf.get_rect(center=(n[1]['pos'][0], n[1]['pos'][1]))
+        self.screen.blit(id_srf, rect)
 
     def draw_edge(self, n1, n2):
         color = self.config.path_selected if (n1[0], n2[0]) in self.selected_edges else self.config.path_normal
@@ -204,17 +211,19 @@ class Graphics:
         self.draw_arrow_head(n1, n2, color)
 
     def draw_arrow_head(self, src, dest, color):
-        leng = Algo.distance(src, dest)
+        leng = self.distance(src[1]['pos'], dest[1]['pos'])
         if leng == 0:
             return
         arw_len = leng / self.config.arrow_scale
         scale = arw_len / leng
         angle = self.config.arrow_angle
         pos_ratio = self.config.arrow_pos
-        head = (src.pos[0] + pos_ratio * (dest.pos[0] - src.pos[0]),
-                src.pos[1] + pos_ratio * (dest.pos[1] - src.pos[1]))
-        d_x = src.pos[0] - head[0]
-        d_y = src.pos[1] - head[1]
+        src_pos = src[1]['pos']
+        dest_pos = dest[1]['pos']
+        head = (src_pos[0] + pos_ratio * (dest_pos[0] - src_pos[0]),
+                src_pos[1] + pos_ratio * (dest_pos[1] - src_pos[1]))
+        d_x = src_pos[0] - head[0]
+        d_y = src_pos[1] - head[1]
         sin_a = math.sin(angle)
         cos_a = math.cos(angle)
         g1 = (head[0] - scale * (d_x * cos_a + d_y * sin_a), head[1] - scale * (d_y * cos_a - d_x * sin_a))
@@ -242,5 +251,7 @@ class Graphics:
             self.selected_edges.remove((n1, n2))
         pygame.event.post(pygame.event.Event(self.ui_event, message="Edge removed"))
 
-
+    @staticmethod
+    def distance(src, dest):
+        return math.sqrt(math.pow(src[0] - dest[0], 2) + math.pow(src[1] - dest[1], 2))
 
