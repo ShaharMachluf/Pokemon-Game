@@ -6,6 +6,8 @@ import pygame
 
 from networkx import DiGraph, get_node_attributes
 
+import Agent
+
 
 class Padding:
     # Simple graph to save padding data and working area screen
@@ -118,6 +120,16 @@ class Graphics:
         self.xButton = Button((0, 0), " Stop Game", self.config.WHITE, self.config.RED, 20, [self.close_clicked])
         pygame.event.post(pygame.event.Event(self.ui_event, message="UI Created"))
 
+        agent = Agent.Agent(**self.player.agents[0])
+        pok = player.pokemons[0]
+        pok_pos = player.find_edge(pok['pos'], pok['type'])
+        cost, sp = agent.target_est(player.g, pok_pos)
+        agent.add(pok_pos, sp)
+        pok2_pos = (1, 2)
+        cost, sp = agent.target_est(player.g, pok2_pos)
+        agent.add(pok2_pos, sp)
+        print(agent.path)
+
     def close_clicked(self):
         self.player.client.stop()
         self.player.client.stop_connection()
@@ -208,7 +220,7 @@ class Graphics:
             yield self.get_positioned((n, self.graph.nodes[n]))
 
     def get_agents_positioned(self):
-        for a in self.player.agents:
+        for a in self.player.agents.values():
             yield self.get_positioned(a, 'agent')
 
     def get_poke_positioned(self):

@@ -33,6 +33,10 @@ class Ash:
         self.agents = JsonParser.get_agents(self.client.get_agents())
         self.graphics = GameGraphics.Graphics(self, GameGraphics.GraphicsConfig())
         Thread(target=self.graphics.display).run()
+        self.pokemon_handler()
+
+    def pokemon_handler(self):
+        pass
 
     def find_pokemons(self):
         positions = []

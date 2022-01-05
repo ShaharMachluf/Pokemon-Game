@@ -21,7 +21,7 @@ class JsonParser:
 
     @staticmethod
     def get_agents(s):
-        return [JsonParser.__parse_pos(x["Agent"]) for x in json.loads(s)["Agents"]]
+        return {x['Agent']['id']: JsonParser.__parse_pos(x["Agent"]) for x in json.loads(s)["Agents"]}
 
     @staticmethod
     def get_game_info(s):

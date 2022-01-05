@@ -1,6 +1,7 @@
 import sys
 import time
 
+import Agent
 from algo import Ash
 
 
@@ -20,6 +21,7 @@ def main():
     player = Ash(host, port)
     if player:
         print("Game completed")
+
 
 
 if __name__ == "__main__":
