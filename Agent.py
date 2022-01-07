@@ -13,12 +13,14 @@ class Agent:
         self.path = []
         self.path_cost = 0
 
-    def add(self, poke_pos, sp):  # poke_pos = (src, dest) node id tuple, sp is shortest path as returned
+    def add(self, poke_pos, sp, sum):  # poke_pos = (src, dest) node id tuple, sp is shortest path as returned
         self.allocated.append(poke_pos)
         if len(self.path) > 0 and sp[0] == self.path[-1]:
             self.path.extend(sp[1:])
+            self.path_cost += sum
         else:
             self.path.extend(sp)
+            self.path_cost += sum
 
     def target_est(self, graph, poke_pos):
         if not self.path:

@@ -1,8 +1,8 @@
 import math
 import random
-from threading import Thread
 
 import GameGraphics
+from Agent import Agent
 from GameServerParser import JsonParser
 from client import Client
 
@@ -17,6 +17,7 @@ class Ash:
         self.g = JsonParser.load_graph(self.client.get_graph())
         self.info = JsonParser.get_game_info(self.client.get_info())
         self.agents = None
+        self.agents_dict = {}
         self.graphics = None
         self.start_game()
 
@@ -31,12 +32,31 @@ class Ash:
                 id_ = random.randrange(0, self.g.number_of_nodes() - 1)
                 self.client.add_agent('{"id":' + str(id_) + '}')
         self.agents = JsonParser.get_agents(self.client.get_agents())
+        i = 0
+        for a in self.agents.values():
+            self.agents_dict[a["id"]] = Agent(a["id"], a["value"], a["src"], a["dest"], a["speed"], a["pos"])
+            if i + 1 >= len(positions):
+                pos = positions[i]
+                self.agents_dict[a["id"]].add(pos, list(pos), self.g.get_edge_data(pos[0], pos[1])['weight'])
+            else:
+                self.agents_dict[a["id"]].path.append(a["src"])
+            i += 1
         self.graphics = GameGraphics.Graphics(self, GameGraphics.GraphicsConfig())
-        Thread(target=self.graphics.display).run()
-        self.pokemon_handler()
 
-    def pokemon_handler(self):
-        pass
+    def pokemon_handler(self):  # main function of the game
+        self.client.start()
+        while True:
+            flag = 0
+            for a in self.agents.values():
+                if a["dest"] == -1 and len(self.agents_dict[a["id"]].path) > 1:
+                    curr = self.agents_dict[a["id"]]
+                    self.client.choose_next_edge('{"agent_id":' + str(curr.id) + ', "next_node_id":' + str(curr.path[1]) + '}')
+                    curr.path.pop(0)
+                    flag = 1
+            if flag == 1:
+                self.client.move()
+                print(JsonParser.get_agents(self.client.get_agents()))
+
 
     def find_pokemons(self):
         positions = []

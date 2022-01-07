@@ -1,5 +1,6 @@
 import sys
 import time
+from threading import Thread
 
 import Agent
 from algo import Ash
@@ -19,6 +20,10 @@ def main():
         port = int(args[1])
 
     player = Ash(host, port)
+    Thread(target=player.graphics.display).start()
+    Thread(target=player.pokemon_handler()).start()
+    Thread(target=player.graphics.display).run()
+    Thread(target=player.pokemon_handler()).run()
     if player:
         print("Game completed")
 
