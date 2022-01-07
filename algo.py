@@ -1,5 +1,6 @@
 import math
 import random
+import time
 
 import GameGraphics
 from Agent import Agent
@@ -17,14 +18,14 @@ class Ash:
         self.g = JsonParser.load_graph(self.client.get_graph())
         self.info = JsonParser.get_game_info(self.client.get_info())
         self.agents = None
-        self.agents_dict = {}
+        self.agents_dict = {}  # contain 'Agent' objects
         self.graphics = None
         self.start_game()
 
     def start_game(self):
         positions = self.find_pokemons()
         num = self.info["agents"]
-        for i in range(0, num):
+        for i in range(0, num):  # add agents
             if len(positions) <= i + 1:
                 id_ = positions[i][0]
                 self.client.add_agent('{"id":' + str(id_) + '}')
@@ -33,7 +34,7 @@ class Ash:
                 self.client.add_agent('{"id":' + str(id_) + '}')
         self.agents = JsonParser.get_agents(self.client.get_agents())
         i = 0
-        for a in self.agents.values():
+        for a in self.agents.values():  # init agent_dict
             self.agents_dict[a["id"]] = Agent(a["id"], a["value"], a["src"], a["dest"], a["speed"], a["pos"])
             if i + 1 >= len(positions):
                 pos = positions[i]
@@ -45,18 +46,59 @@ class Ash:
 
     def pokemon_handler(self):  # main function of the game
         self.client.start()
-        while True:
-            flag = 0
-            for a in self.agents.values():
-                if a["dest"] == -1 and len(self.agents_dict[a["id"]].path) > 1:
-                    curr = self.agents_dict[a["id"]]
-                    self.client.choose_next_edge('{"agent_id":' + str(curr.id) + ', "next_node_id":' + str(curr.path[1]) + '}')
-                    curr.path.pop(0)
-                    flag = 1
+        while self.client.is_running() == 'true':
+            flag = self.next_edge()  # for all the agents that are on nodes
             if flag == 1:
                 self.client.move()
-                print(JsonParser.get_agents(self.client.get_agents()))
+                self.update_agents()
+            flag = self.catch_pokemon()  # for all the agents that are on edges
+            if flag == 1:
+                self.update_agents()
+            # need to receive new pokemons and allocate them
+        self.client.stop()
 
+    def next_edge(self):
+        flag = 0
+        for a in self.agents.values():
+            if a["dest"] == -1 and len(self.agents_dict[a["id"]].path) > 1:  # if the agent needs to move to the next node
+                curr = self.agents_dict[a["id"]]
+                self.client.choose_next_edge(
+                    '{"agent_id":' + str(curr.id) + ', "next_node_id":' + str(curr.path[1]) + '}')
+                curr.path.pop(0)
+                flag = 1
+        return flag
+
+    def update_agents(self):  # update agent_dict according to the current state of the agents
+        self.agents = JsonParser.get_agents(self.client.get_agents())
+        for i in range(len(self.agents)):
+            a = self.agents_dict[i]
+            a.value = self.agents[i]["value"]
+            a.src = self.agents[i]["src"]
+            a.dest = self.agents[i]["dest"]
+            a.speed = self.agents[i]["speed"]
+            a.pos = self.agents[i]["pos"]
+
+    def catch_pokemon(self):
+        flag = 0
+        for a in self.agents_dict.values():
+            if a.allocated[0] == (a.src, a.dest):  # the agent is on an edge with a pokemon
+                while self.agents[a.id]["src"] != a.dest:
+                    self.client.move()
+                    time.sleep(0.11)
+                flag = 1
+                break
+        if flag == 0:
+            for a in self.agents_dict.values():
+                if a.dest != -1:  # the agent is on an edge without pokemon
+                    self.client.move()
+                    dist_left = Ash.distance(a.pos, self.g.nodes[a.dest][1]['pos'])
+                    total_dist = Ash.distance(self.g.nodes[a.src][1]['pos'], self.g.nodes[a.dest][1]['pos'])
+                    weight = self.g.get_edge_data(a.src, a.dest)['weight']
+                    time_to_move = (weight(dist_left/total_dist))/a.speed
+                    time.sleep(time_to_move)
+                    self.client.move()
+                    flag = 1
+        return flag
 
     def find_pokemons(self):
         positions = []

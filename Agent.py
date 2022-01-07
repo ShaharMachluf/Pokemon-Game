@@ -32,7 +32,7 @@ class Agent:
         sum = 0
         for i in range(0, len(sp) - 1):
             sum += graph.get_edge_data(sp[i], sp[i + 1])['weight']
-        return sum, sp + [poke_pos[1]]
+        return sum/self.speed, sp + [poke_pos[1]]
 
     def deploy_next(self):
         pass  # Move to next target
