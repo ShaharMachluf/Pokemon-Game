@@ -2,6 +2,8 @@ import math
 import random
 import time
 
+import networkx as nx
+
 import GameGraphics
 from Agent import Agent
 from GameServerParser import JsonParser
@@ -39,6 +41,7 @@ class Ash:
             if i + 1 <= len(positions):
                 pos = positions[i]
                 self.agents_dict[a["id"]].add(pos, list(pos), self.g.get_edge_data(pos[0], pos[1])['weight'])
+                self.agents_dict[a["id"]].change_path(self.g)
             else:
                 self.agents_dict[a["id"]].path.append(a["src"])
             i += 1
@@ -83,21 +86,23 @@ class Ash:
     def catch_pokemon(self):
         flag = 0
         for a in self.agents_dict.values():
-            if a.allocated[0] == (a.src, a.dest):  # the agent is on an edge with a pokemon
-                while self.agents[a.id]["src"] != a.dest:
+            src = a.src
+            dest = a.dest
+            if len(a.allocated) > 0 and a.allocated[0] == (src, dest):  # the agent is on an edge with a pokemon
+                while self.agents[a.id]["src"] != dest:
                     self.client.move()
                     self.agents = JsonParser.get_agents(self.client.get_agents())
-                    time.sleep(0.11)
+                    time.sleep(0.07)
                 flag = 1
                 a.allocated.pop(0)
                 for i in range(len(a.allocated)):
                     if a.allocated[i] == (a.src, a.dest):
                         a.allocated.pop(i)
-                break
+                        a.path_cost -= (nx.shortest_path_length(self.g, src, dest, weight='weight'))/a.speed
         if flag == 0:
             for a in self.agents_dict.values():
                 if a.dest != -1:  # the agent is on an edge without pokemon
-                    self.client.move()
+                    # self.client.move()
                     dist_left = Ash.distance(a.pos, self.g.nodes[a.dest]['pos'])
                     total_dist = Ash.distance(self.g.nodes[a.src]['pos'], self.g.nodes[a.dest]['pos'])
                     weight = self.g.get_edge_data(a.src, a.dest)['weight']
@@ -110,8 +115,10 @@ class Ash:
     def allocate_pokemons(self):
         self.pokemons = JsonParser.get_pokemons(self.client.get_pokemons())
         positions = self.find_pokemons()
+        min_agent = self.agents_dict[0]
         for pos in positions:
             flag = 0
+            min_agent = self.agents_dict[0]
             for a1 in self.agents_dict.values():  # check if pokemon was already allocated
                 for al in a1.allocated:
                     if pos == al:
@@ -122,7 +129,6 @@ class Ash:
             if flag == 1:
                 continue
             min_dist = float("inf")
-            min_agent = self.agents_dict[0]
             min_path = []
             for a in self.agents_dict.values():
                 target = a.target_est(self.g, pos)
@@ -131,6 +137,7 @@ class Ash:
                     min_path = target[1]
                     min_agent = a
             min_agent.add(pos, min_path, min_dist)
+        min_agent.change_path(self.g)
 
     def find_pokemons(self):
         positions = []
