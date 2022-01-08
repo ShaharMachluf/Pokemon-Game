@@ -99,10 +99,11 @@ class Ash:
                     if a.allocated[i] == (a.src, a.dest):
                         a.allocated.pop(i)
                         a.path_cost -= (nx.shortest_path_length(self.g, src, dest, weight='weight'))/a.speed
+                # break
         if flag == 0:
             for a in self.agents_dict.values():
                 if a.dest != -1:  # the agent is on an edge without pokemon
-                    # self.client.move()
+                    self.client.move()
                     dist_left = Ash.distance(a.pos, self.g.nodes[a.dest]['pos'])
                     total_dist = Ash.distance(self.g.nodes[a.src]['pos'], self.g.nodes[a.dest]['pos'])
                     weight = self.g.get_edge_data(a.src, a.dest)['weight']
