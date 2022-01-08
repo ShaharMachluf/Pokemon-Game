@@ -22,8 +22,8 @@ def main():
     player = Ash(host, port)
     Thread(target=player.graphics.display).start()
     Thread(target=player.pokemon_handler()).start()
-    Thread(target=player.graphics.display).run()
-    Thread(target=player.pokemon_handler()).run()
+    Thread(target=player.graphics.display).join()
+    Thread(target=player.pokemon_handler()).join()
     if player:
         print("Game completed")
 

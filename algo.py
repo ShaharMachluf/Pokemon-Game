@@ -26,7 +26,7 @@ class Ash:
         positions = self.find_pokemons()
         num = self.info["agents"]
         for i in range(0, num):  # add agents
-            if len(positions) <= i + 1:
+            if len(positions) >= i + 1:
                 id_ = positions[i][0]
                 self.client.add_agent('{"id":' + str(id_) + '}')
             else:
@@ -36,7 +36,7 @@ class Ash:
         i = 0
         for a in self.agents.values():  # init agent_dict
             self.agents_dict[a["id"]] = Agent(a["id"], a["value"], a["src"], a["dest"], a["speed"], a["pos"])
-            if i + 1 >= len(positions):
+            if i + 1 <= len(positions):
                 pos = positions[i]
                 self.agents_dict[a["id"]].add(pos, list(pos), self.g.get_edge_data(pos[0], pos[1])['weight'])
             else:
@@ -47,15 +47,17 @@ class Ash:
     def pokemon_handler(self):  # main function of the game
         self.client.start()
         while self.client.is_running() == 'true':
+            print(self.client.time_to_end())
             flag = self.next_edge()  # for all the agents that are on nodes
             if flag == 1:
-                self.client.move()
                 self.update_agents()
             flag = self.catch_pokemon()  # for all the agents that are on edges
-            if flag == 1:
+            if flag != 0:
                 self.update_agents()
-            # need to receive new pokemons and allocate them
+            if flag == 1:
+                self.allocate_pokemons()
         self.client.stop()
+        exit()
 
     def next_edge(self):
         flag = 0
@@ -84,21 +86,51 @@ class Ash:
             if a.allocated[0] == (a.src, a.dest):  # the agent is on an edge with a pokemon
                 while self.agents[a.id]["src"] != a.dest:
                     self.client.move()
+                    self.agents = JsonParser.get_agents(self.client.get_agents())
                     time.sleep(0.11)
                 flag = 1
+                a.allocated.pop(0)
+                for i in range(len(a.allocated)):
+                    if a.allocated[i] == (a.src, a.dest):
+                        a.allocated.pop(i)
                 break
         if flag == 0:
             for a in self.agents_dict.values():
                 if a.dest != -1:  # the agent is on an edge without pokemon
                     self.client.move()
-                    dist_left = Ash.distance(a.pos, self.g.nodes[a.dest][1]['pos'])
-                    total_dist = Ash.distance(self.g.nodes[a.src][1]['pos'], self.g.nodes[a.dest][1]['pos'])
+                    dist_left = Ash.distance(a.pos, self.g.nodes[a.dest]['pos'])
+                    total_dist = Ash.distance(self.g.nodes[a.src]['pos'], self.g.nodes[a.dest]['pos'])
                     weight = self.g.get_edge_data(a.src, a.dest)['weight']
-                    time_to_move = (weight(dist_left/total_dist))/a.speed
+                    time_to_move = (weight*(dist_left/total_dist))/a.speed
                     time.sleep(time_to_move)
                     self.client.move()
-                    flag = 1
+                    flag = 2
         return flag
+
+    def allocate_pokemons(self):
+        self.pokemons = JsonParser.get_pokemons(self.client.get_pokemons())
+        positions = self.find_pokemons()
+        for pos in positions:
+            flag = 0
+            for a1 in self.agents_dict.values():  # check if pokemon was already allocated
+                for al in a1.allocated:
+                    if pos == al:
+                        flag = 1
+                        break
+                if flag == 1:
+                    break
+            if flag == 1:
+                continue
+            min_dist = float("inf")
+            min_agent = self.agents_dict[0]
+            min_path = []
+            for a in self.agents_dict.values():
+                target = a.target_est(self.g, pos)
+                if target[0] < min_dist:
+                    min_dist = target[0]
+                    min_path = target[1]
+                    min_agent = a
+            min_agent.add(pos, min_path, min_dist)
 
     def find_pokemons(self):
         positions = []
