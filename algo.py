@@ -55,6 +55,8 @@ class Ash:
             flag = self.next_edge()  # for all the agents that are on nodes
             if flag == 1:
                 self.update_agents()
+                for a in self.agents_dict.values():
+                    print("id: " + str(a.id) +", src: " + str(a.src) + ", dest" + str(a.dest) + ", path: " +str(a.path) + ", allocated:" + str(a.allocated) +"")
             flag = self.catch_pokemon()  # for all the agents that are on edges
             if flag != 0:
                 self.update_agents()
@@ -66,6 +68,7 @@ class Ash:
     def next_edge(self):
         flag = 0
         for a in self.agents.values():
+            self.agents_dict[a["id"]].change_path(self.g)
             if a["dest"] == -1 and len(self.agents_dict[a["id"]].path) > 1:  # if the agent needs to move to the next node
                 curr = self.agents_dict[a["id"]]
                 self.client.choose_next_edge(
@@ -96,11 +99,9 @@ class Ash:
                     time.sleep(0.07)
                 flag = 1
                 a.allocated.pop(0)
-                a.change_path(self.g)
-                for i in range(len(a.allocated)):
+                for i in range(len(a.allocated)):  # check if the agent caught more then one pokemon
                     if a.allocated[i] == (a.src, a.dest):
                         a.allocated.pop(i)
-                        a.change_path(self.g)
                         a.path_cost -= (nx.shortest_path_length(self.g, src, dest, weight='weight'))/a.speed
         if flag == 0:
             for a in self.agents_dict.values():
