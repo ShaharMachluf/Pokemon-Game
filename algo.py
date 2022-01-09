@@ -2,6 +2,7 @@ import math
 import random
 import sys
 import time
+from json import JSONDecodeError
 
 import networkx as nx
 
@@ -50,19 +51,25 @@ class Ash:
 
     def pokemon_handler(self):  # main function of the game
         self.client.start()
-        while self.client.is_running() == 'true':
-            print(self.client.time_to_end())
-            self.info = JsonParser.get_game_info(self.client.get_info())
-            flag = self.next_edge()  # for all the agents that are on nodes
-            if flag == 1:
-                self.update_agents()
-            flag = self.catch_pokemon()  # for all the agents that are on edges
-            if flag != 0:
-                self.update_agents()
-            if flag == 1:
-                self.allocate_pokemons()
-        self.client.stop()
-        sys.exit()
+        try:
+            while self.client.is_running() == 'true':
+                print(self.client.time_to_end())
+                self.info = JsonParser.get_game_info(self.client.get_info())
+                flag = self.next_edge()  # for all the agents that are on nodes
+                if flag == 1:
+                    self.update_agents()
+                flag = self.catch_pokemon()  # for all the agents that are on edges
+                if flag != 0:
+                    self.update_agents()
+                if flag == 1:
+                    self.allocate_pokemons()
+        except(TypeError, JSONDecodeError, ConnectionResetError, BrokenPipeError):
+            pass
+        try:
+            self.client.stop()
+        except(ConnectionResetError, BrokenPipeError):
+            pass
+        exit()
 
     def next_edge(self):
         flag = 0
