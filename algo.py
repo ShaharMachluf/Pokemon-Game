@@ -1,5 +1,6 @@
 import math
 import random
+import sys
 import time
 
 import networkx as nx
@@ -9,7 +10,7 @@ from Agent import Agent
 from GameServerParser import JsonParser
 from client import Client
 
-EPS = 0.0001
+EPS = 0.00001
 
 
 class Ash:
@@ -60,7 +61,7 @@ class Ash:
             if flag == 1:
                 self.allocate_pokemons()
         self.client.stop()
-        exit()
+        sys.exit()
 
     def next_edge(self):
         flag = 0
@@ -95,11 +96,12 @@ class Ash:
                     time.sleep(0.07)
                 flag = 1
                 a.allocated.pop(0)
+                a.change_path(self.g)
                 for i in range(len(a.allocated)):
                     if a.allocated[i] == (a.src, a.dest):
                         a.allocated.pop(i)
+                        a.change_path(self.g)
                         a.path_cost -= (nx.shortest_path_length(self.g, src, dest, weight='weight'))/a.speed
-                # break
         if flag == 0:
             for a in self.agents_dict.values():
                 if a.dest != -1:  # the agent is on an edge without pokemon
@@ -116,7 +118,6 @@ class Ash:
     def allocate_pokemons(self):
         self.pokemons = JsonParser.get_pokemons(self.client.get_pokemons())
         positions = self.find_pokemons()
-        min_agent = self.agents_dict[0]
         for pos in positions:
             flag = 0
             min_agent = self.agents_dict[0]
@@ -138,7 +139,7 @@ class Ash:
                     min_path = target[1]
                     min_agent = a
             min_agent.add(pos, min_path, min_dist)
-        min_agent.change_path(self.g)
+            min_agent.change_path(self.g)
 
     def find_pokemons(self):
         positions = []
