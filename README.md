@@ -26,4 +26,4 @@ Catch as many pokemons as you can in a given time; The target is the recieve as 
 
 
 # Want to learn more?
-## Visit our ![Wiki](https://github.com/ofirrubin/OOP-Ex4/wiki) to learn about the performance, watch a demo and more.
+## Visit our [Wiki](https://github.com/ofirrubin/OOP-Ex4/wiki) to learn about the performance, watch a demo and more.
