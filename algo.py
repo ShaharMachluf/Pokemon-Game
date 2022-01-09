@@ -52,11 +52,10 @@ class Ash:
         self.client.start()
         while self.client.is_running() == 'true':
             print(self.client.time_to_end())
+            self.info = JsonParser.get_game_info(self.client.get_info())
             flag = self.next_edge()  # for all the agents that are on nodes
             if flag == 1:
                 self.update_agents()
-                for a in self.agents_dict.values():
-                    print("id: " + str(a.id) +", src: " + str(a.src) + ", dest" + str(a.dest) + ", path: " +str(a.path) + ", allocated:" + str(a.allocated) +"")
             flag = self.catch_pokemon()  # for all the agents that are on edges
             if flag != 0:
                 self.update_agents()
