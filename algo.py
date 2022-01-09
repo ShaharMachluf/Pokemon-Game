@@ -23,7 +23,7 @@ class Ash:
         self.info = JsonParser.get_game_info(self.client.get_info())
         self.agents = None
         self.agents_dict = {}  # contain 'Agent' objects
-        self.graphics = None
+        self.running = False
         self.start_game()
 
     def start_game(self):
@@ -47,7 +47,7 @@ class Ash:
             else:
                 self.agents_dict[a["id"]].path.append(a["src"])
             i += 1
-        self.graphics = GameGraphics.Graphics(self, GameGraphics.GraphicsConfig())
+        self.running = True
 
     def pokemon_handler(self):  # main function of the game
         self.client.start()
@@ -69,7 +69,9 @@ class Ash:
             self.client.stop()
         except(ConnectionResetError, BrokenPipeError):
             pass
+        self.running = False
         exit()
+
 
     def next_edge(self):
         flag = 0
@@ -112,7 +114,7 @@ class Ash:
         if flag == 0:
             for a in self.agents_dict.values():
                 if a.dest != -1:  # the agent is on an edge without pokemon
-                    self.client.move()
+                    # self.client.move()
                     dist_left = Ash.distance(a.pos, self.g.nodes[a.dest]['pos'])
                     total_dist = Ash.distance(self.g.nodes[a.src]['pos'], self.g.nodes[a.dest]['pos'])
                     weight = self.g.get_edge_data(a.src, a.dest)['weight']
@@ -126,20 +128,14 @@ class Ash:
         self.pokemons = JsonParser.get_pokemons(self.client.get_pokemons())
         positions = self.find_pokemons()
         for pos in positions:
-            flag = 0
+            flag = False
             min_agent = self.agents_dict[0]
-            for a1 in self.agents_dict.values():  # check if pokemon was already allocated
-                for al in a1.allocated:
-                    if pos == al:
-                        flag = 1
-                        break
-                if flag == 1:
-                    break
-            if flag == 1:
+            flag = any(pos in a1.allocated for a1 in self.agents_dict.values())
+            if flag:
                 continue
             min_dist = float("inf")
             min_path = []
-            for a in self.agents_dict.values():
+            for a in self.agents_dict.values():  # if pokemon not allocated already, allocate it
                 target = a.target_est(self.g, pos)
                 if target[0] < min_dist:
                     min_dist = target[0]

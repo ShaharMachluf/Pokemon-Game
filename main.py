@@ -3,6 +3,7 @@ import time
 from threading import Thread
 
 import Agent
+import GameGraphics
 from algo import Ash
 
 
@@ -20,12 +21,11 @@ def main():
         port = int(args[1])
 
     player = Ash(host, port)
-    Thread(target=player.graphics.display).start()
-    Thread(target=player.pokemon_handler()).start()
-    # Thread(target=player.graphics.display).join()
-    # Thread(target=player.pokemon_handler()).join()
+    Thread(target=player.pokemon_handler).start()
+    graphics = GameGraphics.Graphics(player, GameGraphics.GraphicsConfig)
+    graphics.display()
     if player:
-        print("Game completed")
+        print("Game Over")
 
 
 
