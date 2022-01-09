@@ -6,8 +6,6 @@ import pygame
 
 from networkx import DiGraph, get_node_attributes
 
-import Agent
-
 
 class Padding:
     # Simple graph to save padding data and working area screen
@@ -42,7 +40,7 @@ class GraphicsConfig:
     FONT_SIZE = 20
     FONT_IS_BOLD = True
     AGENT_IMG = './Pokeball.png'
-    POKE_UP_IMG = './Pikachu Up.jpg'
+    POKE_UP_IMG = './Pikachu Up.png'
     POKE_DOWN_IMG = './Pikachu Down.png'
 
     node_normal = BLUE
@@ -180,8 +178,9 @@ class Graphics:
         self.h = di.current_h
 
     def display(self):
-        running = True
-        while running:
+        if self.player is None:
+            return
+        while self.player.running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     exit(0)
@@ -194,7 +193,7 @@ class Graphics:
             self.screen.fill(self.config.bg_color)
             self.draw_all()
             pygame.display.update()
-            self.clock.tick(30)
+            self.clock.tick(60)
 
     def get_pos(self, node):
         if node[1]['pos'] is None or node[1]['pos'] == ():
