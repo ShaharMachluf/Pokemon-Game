@@ -1,6 +1,5 @@
 import sys
 import time
-from threading import Thread
 
 from GUI import Graphics
 from GUI.GraphicsConfig import DefaultConfig
@@ -32,7 +31,7 @@ def main():
         print("Game Over")
     except (ConnectionRefusedError, ConnectionResetError, ConnectionAbortedError):
         print("Please make sure you're connected to the internet and the server is up.")
-        exit(-1)
+        sys.exit(-1)
 
 
 if __name__ == "__main__":
