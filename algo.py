@@ -1,12 +1,11 @@
 import math
 import random
-import sys
 import time
 from json import JSONDecodeError
+from threading import Thread
 
 import networkx as nx
 
-import GameGraphics
 from Agent import Agent
 from GameServerParser import JsonParser
 from client import Client
@@ -24,7 +23,7 @@ class Ash:
         self.agents = None
         self.agents_dict = {}  # contain 'Agent' objects
         self.running = False
-        self.start_game()
+        self.time_left = 0
 
     def start_game(self):
         positions = self.find_pokemons()
@@ -48,20 +47,21 @@ class Ash:
                 self.agents_dict[a["id"]].path.append(a["src"])
             i += 1
         self.running = True
+        Thread(target=self.pokemon_handler).start()
 
     def pokemon_handler(self):  # main function of the game
         self.client.start()
         try:
             while self.client.is_running() == 'true':
-                print(self.client.time_to_end())
+                self.time_left = self.client.time_to_end()
                 self.info = JsonParser.get_game_info(self.client.get_info())
                 flag = self.next_edge()  # for all the agents that are on nodes
-                if flag == 1:
+                if flag is True:
                     self.update_agents()
                 flag = self.catch_pokemon()  # for all the agents that are on edges
-                if flag != 0:
+                if flag is not True:  # None or False
                     self.update_agents()
-                if flag == 1:
+                if flag is True:
                     self.allocate_pokemons()
         except(TypeError, JSONDecodeError, ConnectionResetError, BrokenPipeError):
             pass
@@ -70,33 +70,29 @@ class Ash:
         except(ConnectionResetError, BrokenPipeError):
             pass
         self.running = False
+        print(self.info)
         exit()
 
-
     def next_edge(self):
-        flag = 0
+        flag = False
         for a in self.agents.values():
             self.agents_dict[a["id"]].change_path(self.g)
-            if a["dest"] == -1 and len(self.agents_dict[a["id"]].path) > 1:  # if the agent needs to move to the next node
+            # if the agent needs to move to the next node
+            if a["dest"] == -1 and len(self.agents_dict[a["id"]].path) > 1:
                 curr = self.agents_dict[a["id"]]
                 self.client.choose_next_edge(
                     '{"agent_id":' + str(curr.id) + ', "next_node_id":' + str(curr.path[1]) + '}')
                 curr.path.pop(0)
-                flag = 1
+                flag = True
         return flag
 
     def update_agents(self):  # update agent_dict according to the current state of the agents
         self.agents = JsonParser.get_agents(self.client.get_agents())
         for i in range(len(self.agents)):
-            a = self.agents_dict[i]
-            a.value = self.agents[i]["value"]
-            a.src = self.agents[i]["src"]
-            a.dest = self.agents[i]["dest"]
-            a.speed = self.agents[i]["speed"]
-            a.pos = self.agents[i]["pos"]
+            self.agents_dict[i] = Agent.get_updated(self.agents[i], self.agents_dict[i])
 
     def catch_pokemon(self):
-        flag = 0
+        flag = False
         for a in self.agents_dict.values():
             src = a.src
             dest = a.dest
@@ -105,33 +101,40 @@ class Ash:
                     self.client.move()
                     self.agents = JsonParser.get_agents(self.client.get_agents())
                     time.sleep(0.07)
-                flag = 1
+                flag = True
                 a.allocated.pop(0)
-                for i in range(len(a.allocated)):  # check if the agent caught more then one pokemon
-                    if a.allocated[i] == (a.src, a.dest):
-                        a.allocated.pop(i)
+
+                # # check if the agent caught more then one pokemon in order to remove the allocation
+                for edge in a.allocated:
+                    if edge == (a.src, a.dest):  # the current edge
+                        a.allocated.remove(edge)
                         a.path_cost -= (nx.shortest_path_length(self.g, src, dest, weight='weight'))/a.speed
-        if flag == 0:
+        if flag is False:
+            # We moved all agents from edges with pokemons, all edges either have no dest or need to pass empty edges
+            # agents that are just passing on empty edges.
             for a in self.agents_dict.values():
-                if a.dest != -1:  # the agent is on an edge without pokemon
-                    # self.client.move()
-                    dist_left = Ash.distance(a.pos, self.g.nodes[a.dest]['pos'])
-                    total_dist = Ash.distance(self.g.nodes[a.src]['pos'], self.g.nodes[a.dest]['pos'])
-                    weight = self.g.get_edge_data(a.src, a.dest)['weight']
-                    time_to_move = (weight*(dist_left/total_dist))/a.speed
-                    time.sleep(time_to_move)
-                    self.client.move()
-                    flag = 2
+                flag = self.passing_agent(a)
         return flag
+
+    def passing_agent(self, agent):
+        if agent.dest == -1:  # agent is not set to be moved
+            return False
+        time.sleep(self.time_to_move(agent))
+        self.client.move()
+
+    def time_to_move(self, agent):
+        # est. time to move from node to node with weight as comp. parameter.
+        dist_left = Ash.distance(agent.pos, self.g.nodes[agent.dest]['pos'])
+        total_dist = Ash.distance(self.g.nodes[agent.src]['pos'], self.g.nodes[agent.dest]['pos'])
+        weight = self.g.get_edge_data(agent.src, agent.dest)['weight']
+        return (weight * (dist_left / total_dist)) / agent.speed
 
     def allocate_pokemons(self):
         self.pokemons = JsonParser.get_pokemons(self.client.get_pokemons())
         positions = self.find_pokemons()
         for pos in positions:
-            flag = False
             min_agent = self.agents_dict[0]
-            flag = any(pos in a1.allocated for a1 in self.agents_dict.values())
-            if flag:
+            if any(pos in a1.allocated for a1 in self.agents_dict.values()):
                 continue
             min_dist = float("inf")
             min_path = []

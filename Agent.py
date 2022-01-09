@@ -13,6 +13,14 @@ class Agent:
         self.path = []
         self.path_cost = 0
 
+    @staticmethod
+    def get_updated(agent, agent_dict):
+        a = Agent(**agent)
+        a.allocated = agent_dict.allocated
+        a.path = agent_dict.path
+        a.path_cost = agent_dict.path_cost
+        return a
+
     def add(self, poke_pos, sp, sum):  # poke_pos = (src, dest) node id tuple, sp is shortest path as returned
         self.allocated.append(poke_pos)
         self.path_cost += sum

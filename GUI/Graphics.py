@@ -4,78 +4,10 @@ import sys
 
 import pygame
 
-from networkx import DiGraph, get_node_attributes
+from networkx import DiGraph
 
-
-class Padding:
-    # Simple graph to save padding data and working area screen
-    def __init__(self, left, top, right, bottom):
-        self.left = left
-        self.top = top
-        self.right = right
-        self.bottom = bottom
-
-    def get_width(self, width):
-        return width - (self.left + self.right)
-
-    def get_height(self, height):
-        return height - (self.top + self.bottom)
-
-    def get_top(self):
-        return self.top
-
-    def get_right(self):
-        return self.right
-
-
-class GraphicsConfig:
-    # Simple class to configure the graph settings
-    BLACK = (0, 0, 0)
-    WHITE = (255, 255, 255)
-    RED = (255, 0, 0)
-    GREEN = (0, 255, 0)
-    BLUE = (0, 0, 255)
-
-    FONT_NAME = 'Arial'
-    FONT_SIZE = 20
-    FONT_IS_BOLD = True
-    AGENT_IMG = './Pokeball.png'
-    POKE_UP_IMG = './Pikachu Up.png'
-    POKE_DOWN_IMG = './Pikachu Down.png'
-
-    node_normal = BLUE
-    node_selected = GREEN
-    path_normal = BLACK
-    path_selected = RED
-    bg_color = WHITE
-    arrow_angle = 65  # What angle will be the arrow head line compare to the line it's on
-    arrow_pos = 0.7  # the arrow head will start at .. of the distance from src to dest
-    arrow_scale = 16  # arrow len will be divided by..
-    radius_dens = 10  # so radius = (screen_area / (n_of_edges + 1)) / radius_dens
-
-
-class Button:
-    def __init__(self, pos, text, t_color, bg_color, f_size, call_on_click):
-        self.pos = pos
-        self.render = pygame.font.SysFont("Arial", f_size).render(text, True, t_color)
-        self.surface = pygame.Surface(self.render.get_size())
-        self.surface.fill(bg_color)
-        self.surface.blit(self.render, (0, 0))  # pos relative to the surface
-        self.call_on_click = call_on_click[0]
-        if self.call_on_click and len(call_on_click) > 1:
-            self.call_on_click_args = call_on_click[1:]
-        else:
-            self.call_on_click_args = None
-        self.rect = pygame.Rect(self.pos[0], self.pos[1],
-                                self.render.get_size()[0], self.render.get_size()[1])
-
-    def show(self, screen):
-        screen.blit(self.surface, self.pos)
-
-    def click_event(self, event):
-        if event.type == pygame.MOUSEBUTTONDOWN and pygame.mouse.get_pressed()[0] and self.rect.collidepoint(*pygame.mouse.get_pos()):
-            if self.call_on_click is not None:
-                self.call_on_click(*self.call_on_click_args) if self.call_on_click_args is not None else self.call_on_click()
+from GUI.Button import Button
+from GUI.Padding import Padding
 
 
 class Graphics:
@@ -258,7 +190,9 @@ class Graphics:
     def draw_stats(self):
         moves = self.player.info["moves"]
         grade = self.player.info["grade"]
-        title = "Grade: " + str(grade) + "          " + str("Moves: ") + str(moves)
+        t_left = int(self.player.time_left) / 1000.0
+        title = "Grade: " + str(grade) + "           Moves: " + str(moves) +\
+                "           Time left: " + str(t_left) + " sec"
         rend = self.font.render(title, True, self.config.BLACK)
         rect = rend.get_rect(center=(self.padding.get_width(self.w) / 2,
                                      self.padding.get_top() / 2 - self.config.FONT_SIZE / 2))
@@ -279,19 +213,19 @@ class Graphics:
         self.screen.blit(id_srf, rect)
 
     def draw_agent(self, agent):
-        AGENT_SIZE = 30
-        self.screen.blit(pygame.transform.scale(self.agent_img, (AGENT_SIZE, AGENT_SIZE)), agent[1]['pos'])
+        agent_size = self.config.agent_size
+        self.screen.blit(pygame.transform.scale(self.agent_img, (agent_size, agent_size)), agent[1]['pos'])
         id_srf = self.font.render(str(agent[0]), True, self.config.BLACK)
-        rect = id_srf.get_rect(center=(agent[1]['pos'][0], agent[1]['pos'][1] + AGENT_SIZE + 5))
+        rect = id_srf.get_rect(center=(agent[1]['pos'][0], agent[1]['pos'][1] + agent_size + 5))
         self.screen.blit(id_srf, rect)
 
     def draw_poke(self, poke):
-        POKE_SIZE = 50
         if poke[0] > 0:  # UP
             img = self.poke_up_img
         else:  # DOWN
             img = self.poke_down_img
-        self.screen.blit(pygame.transform.scale(img, (POKE_SIZE + 20, POKE_SIZE)), poke[1]['pos'])
+        self.screen.blit(pygame.transform.scale(img,
+                                                (self.config.poke_width + 20, self.config.poke_height)), poke[1]['pos'])
 
     def draw_edge(self, n1, n2):
         color = self.config.path_selected if (n1[0], n2[0]) in self.selected_edges else self.config.path_normal
