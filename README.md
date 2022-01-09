@@ -23,3 +23,7 @@ Catch as many pokemons as you can in a given time; The target is the recieve as 
   
 #### Running with specific address & delay(ip must be a valid IPv4 string, port must be a valid port number, anyhting else= at least 1 other char):
   ```python3 main.py <ip> <port> <anything else>```
+
+
+# Want to learn more?
+## Visit our ![Wiki](https://github.com/ofirrubin/OOP-Ex4/wiki) to learn about the performance, watch a demo and more.
