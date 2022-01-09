@@ -3,7 +3,7 @@
 Pokemon Game -
 Catch as many pokemons as you can in a given time; The target is the recieve as many points as you can while maintainning < 10 calls/sec.
 
-![An image]("https://github.com/ofirrubin/OOP-Ex4/blob/master/Demo/Level%2011%20IMG.png")
+![This is an image](https://github.com/ofirrubin/OOP-Ex4/blob/master/Demo/Level%2011%20IMG.png)
 
 # How to run:
 
